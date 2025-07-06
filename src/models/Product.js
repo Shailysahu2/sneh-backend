@@ -24,6 +24,11 @@ const productSchema = new mongoose.Schema({
     required: true,
     min: 0
   },
+  sku: {
+    type: String,
+    required: true,
+    unique: true
+  },
   imageUrl: {
     type: String,
     default: ''
@@ -31,6 +36,10 @@ const productSchema = new mongoose.Schema({
   brand: {
     type: String,
     required: true
+  },
+  isActive: {
+    type: Boolean,
+    default: true
   },
   images: [
     {
