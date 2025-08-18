@@ -44,10 +44,10 @@ router.post('/', /* auth, checkRole(['admin', 'employee']), */ upload.array('ima
     const { name, description, price, category, stock, brand, sku } = req.body;
     
     // Validate required fields
-    if (!name || !description || !price || !category || !brand) {
-      console.log('Missing required fields:', { name, description, price, category, brand });
+    if (!name || !description || !price || !category) {
+      console.log('Missing required fields:', { name, description, price, category });
       return res.status(400).json({ 
-        error: 'Missing required fields: name, description, price, category, and brand are required' 
+        error: 'Missing required fields: name, description, price, and category are required' 
       });
     }
 
