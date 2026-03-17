@@ -1,18 +1,17 @@
 const express = require('express');
-const { generateChatbotResponse } = require('../services/ai');
-const { auth } = require('../middleware/auth');
+const { getQwenInstructResponse } = require('../services/ai');
 
 const router = express.Router();
 
-// Get chatbot response
-router.post('/chat', auth, async (req, res) => {
+// Public "AI search" endpoint (token stays server-side)
+router.post('/search', async (req, res) => {
   try {
-    const { message } = req.body;
-    if (!message) {
-      return res.status(400).json({ error: 'Message is required' });
+    const { query, history } = req.body || {};
+    if (!query || typeof query !== 'string') {
+      return res.status(400).json({ error: 'query is required' });
     }
 
-    const response = await generateChatbotResponse(message);
+    const response = await getQwenInstructResponse(query, history);
     res.json({ response });
   } catch (error) {
     console.error('Chatbot error:', error);

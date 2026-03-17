@@ -65,6 +65,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/tasks', taskRoutes);
+app.use('/api/chatbot', chatbotRoutes);
 
 // Start server
 app.listen(PORT, () => {
