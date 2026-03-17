@@ -1,10 +1,11 @@
 const express = require('express');
 const { getQwenInstructResponse } = require('../services/ai');
+const { auth } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Public "AI search" endpoint (token stays server-side)
-router.post('/search', async (req, res) => {
+// AI search endpoint (requires login)
+router.post('/search', auth, async (req, res) => {
   try {
     const { query, history } = req.body || {};
     if (!query || typeof query !== 'string') {
