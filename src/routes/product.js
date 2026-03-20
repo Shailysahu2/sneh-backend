@@ -41,7 +41,7 @@ router.post('/', /* auth, checkRole(['admin', 'employee']), */ upload.array('ima
     console.log('Body:', req.body);
     console.log('Files:', req.files);
     
-    const { name, description, price, category, stock, brand, sku } = req.body;
+    const { name, description, price, category, stock, sku, head, flowLtrHr, hp, operatingVoltage, maxSuction, pipeSize, windingMaterial } = req.body;
     
     // Validate required fields
     if (!name || !description || !price || !category) {
@@ -74,7 +74,13 @@ router.post('/', /* auth, checkRole(['admin', 'employee']), */ upload.array('ima
       price: Number(price),
       category,
       stock: Number(stock) || 0,
-      brand,
+      head: head || '',
+      flowLtrHr: flowLtrHr || '',
+      hp: hp || '',
+      operatingVoltage: operatingVoltage || '',
+      maxSuction: maxSuction || '',
+      pipeSize: pipeSize || '',
+      windingMaterial: windingMaterial || '',
       sku: sku || `SKU${Date.now()}`,
       images,
       seller: req.user?._id || '507f1f77bcf86cd799439011' // Use authenticated user or default ObjectId for testing
@@ -139,7 +145,7 @@ router.get('/:id', async (req, res) => {
 // Update a product (admin/employee only)
 router.put('/:id', /* auth, checkRole(['admin', 'employee']), */ async (req, res) => {
   try {
-    const { name, description, price, category, brand, stock, sku, isActive } = req.body;
+    const { name, description, price, category, stock, sku, isActive, head, flowLtrHr, hp, operatingVoltage, maxSuction, pipeSize, windingMaterial } = req.body;
     const updates = {};
     if (name) updates.name = name;
     if (description) {
@@ -149,10 +155,16 @@ router.put('/:id', /* auth, checkRole(['admin', 'employee']), */ async (req, res
     }
     if (price !== undefined) updates.price = Number(price);
     if (category) updates.category = category;
-    if (brand) updates.brand = brand;
     if (stock !== undefined) updates.stock = Number(stock);
     if (sku) updates.sku = sku;
     if (isActive !== undefined) updates.isActive = isActive;
+    if (head !== undefined) updates.head = head;
+    if (flowLtrHr !== undefined) updates.flowLtrHr = flowLtrHr;
+    if (hp !== undefined) updates.hp = hp;
+    if (operatingVoltage !== undefined) updates.operatingVoltage = operatingVoltage;
+    if (maxSuction !== undefined) updates.maxSuction = maxSuction;
+    if (pipeSize !== undefined) updates.pipeSize = pipeSize;
+    if (windingMaterial !== undefined) updates.windingMaterial = windingMaterial;
 
     console.log('Updating product with data:', updates);
 

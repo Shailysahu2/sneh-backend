@@ -26,14 +26,43 @@ const productSchema = new mongoose.Schema({
   },
   sku: {
     type: String,
-    required: true,
-    unique: true
+    required: true
   },
   imageUrl: {
     type: String,
     default: ''
   },
-  brand: {
+  head: {
+    type: String,
+    required: false,
+    default: ''
+  },
+  flowLtrHr: {
+    type: String,
+    required: false,
+    default: ''
+  },
+  hp: {
+    type: String,
+    required: false,
+    default: ''
+  },
+  operatingVoltage: {
+    type: String,
+    required: false,
+    default: ''
+  },
+  maxSuction: {
+    type: String,
+    required: false,
+    default: ''
+  },
+  pipeSize: {
+    type: String,
+    required: false,
+    default: ''
+  },
+  windingMaterial: {
     type: String,
     required: false,
     default: ''
