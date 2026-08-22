@@ -5,8 +5,37 @@ const { summarizeText, searchProducts } = require('../services/ai');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const cloudinary = require('cloudinary').v2;
 
 const router = express.Router();
+
+const isCloudinaryEnabled = !!(
+  process.env.CLOUDINARY_CLOUD_NAME &&
+  process.env.CLOUDINARY_API_KEY &&
+  process.env.CLOUDINARY_API_SECRET
+);
+
+if (isCloudinaryEnabled) {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+  });
+}
+
+const sanitizeFileName = (originalName) => {
+  const extMatch = originalName.match(/\.[^/.]+$/);
+  const extension = extMatch ? extMatch[0].toLowerCase() : '.jpg';
+
+  const baseName = originalName
+    .replace(/\.[^/.]+$/, '')
+    .replace(/[^a-zA-Z0-9-_ ]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .toLowerCase();
+
+  return `${Date.now()}-${baseName || 'image'}${extension}`;
+};
 
 // Multer setup for local storage
 const storage = multer.diskStorage({
@@ -16,10 +45,33 @@ const storage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
-    cb(null, Date.now() + '-' + file.originalname);
+    cb(null, sanitizeFileName(file.originalname));
   }
 });
 const upload = multer({ storage });
+
+const uploadImageToStorage = async (file) => {
+  if (isCloudinaryEnabled) {
+    const result = await cloudinary.uploader.upload(file.path, {
+      folder: 'products',
+      resource_type: 'image'
+    });
+
+    if (fs.existsSync(file.path)) {
+      fs.unlinkSync(file.path);
+    }
+
+    return {
+      url: result.secure_url,
+      public_id: result.public_id
+    };
+  }
+
+  return {
+    url: `/uploads/${file.filename}`,
+    public_id: file.filename
+  };
+};
 
 // Test endpoints (must come before /:id route)
 router.get('/test', (req, res) => {
@@ -57,7 +109,11 @@ router.post('/', /* auth, checkRole(['admin', 'employee']), */ upload.array('ima
     
     let images = [];
     if (req.files && req.files.length > 0) {
-      images = req.files.map(file => ({ url: `/uploads/${file.filename}` }));
+      const uploadedImages = await Promise.all(req.files.map(uploadImageToStorage));
+      images = uploadedImages.map(item => ({
+        url: item.url,
+        public_id: item.public_id || ''
+      }));
     } else if (req.body.images) {
       // If images are sent as JSON (URLs)
       try {
