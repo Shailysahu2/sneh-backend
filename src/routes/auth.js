@@ -82,15 +82,21 @@ router.post('/register', async (req, res) => {
     // Send notification email to admin (if configured)
     try {
       if (process.env.EMAIL_HOST && process.env.ADMIN_EMAIL) {
-        const transporter = nodemailer.createTransport({
+        const port = parseInt(process.env.EMAIL_PORT || '587', 10);
+        const isSecure = port === 465;
+        const transporterOptions = {
           host: process.env.EMAIL_HOST,
-          port: parseInt(process.env.EMAIL_PORT || '587', 10),
-          secure: false,
+          port,
+          secure: isSecure,
           auth: process.env.EMAIL_USER ? {
             user: process.env.EMAIL_USER,
             pass: process.env.EMAIL_PASS
-          } : undefined
-        });
+          } : undefined,
+          tls: { rejectUnauthorized: false }
+        };
+
+        // For Gmail, nodemailer can also use the 'service' option, but host/port works too
+        const transporter = nodemailer.createTransport(transporterOptions);
 
         const mailOptions = {
           from: process.env.EMAIL_USER || `no-reply@${req.hostname}`,
@@ -99,9 +105,12 @@ router.post('/register', async (req, res) => {
           text: `A new user has registered.\n\nName: ${user.firstName} ${user.lastName}\nEmail: ${user.email}\nPhone: ${user.phone || 'N/A'}\nRegistered At: ${user.createdAt}`
         };
 
-        transporter.sendMail(mailOptions).catch(err => {
+        try {
+          const info = await transporter.sendMail(mailOptions);
+          console.log('Admin notification email sent:', info && info.messageId);
+        } catch (err) {
           console.error('Failed to send admin notification email:', err);
-        });
+        }
       } else {
         console.log('EMAIL_HOST or ADMIN_EMAIL not configured; skipping admin email');
       }
