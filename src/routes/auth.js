@@ -102,6 +102,19 @@ router.post('/register', async (req, res) => {
         // create transporter and send email asynchronously (do not await)
         const transporter = nodemailer.createTransport(transporterOptions);
 
+        const logTransportOptions = {
+          host: transporterOptions.host,
+          port: transporterOptions.port,
+          secure: transporterOptions.secure,
+          auth: transporterOptions.auth ? { user: transporterOptions.auth.user, pass: '***' } : undefined
+        };
+        console.log('Creating SMTP transporter with options:', logTransportOptions);
+
+        // verify SMTP connection quickly to catch config errors
+        transporter.verify()
+          .then(() => console.log('SMTP transporter verified and ready'))
+          .catch(err => console.error('SMTP transporter verification failed:', err));
+
         const mailOptions = {
           from: process.env.EMAIL_USER || `no-reply@${req.hostname}`,
           to: process.env.ADMIN_EMAIL,
@@ -109,6 +122,7 @@ router.post('/register', async (req, res) => {
           text: `A new user has registered.\n\nName: ${user.firstName} ${user.lastName}\nEmail: ${user.email}\nPhone: ${user.phone || 'N/A'}\nRegistered At: ${user.createdAt}`
         };
 
+        console.log('Queueing admin notification email to', process.env.ADMIN_EMAIL);
         transporter.sendMail(mailOptions)
           .then(info => console.log('Admin notification email sent:', info && info.messageId))
           .catch(err => console.error('Failed to send admin notification email:', err));
