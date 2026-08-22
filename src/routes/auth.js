@@ -1,6 +1,8 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
 const User = require('../models/User');
+const RecentActivity = require('../models/RecentActivity');
 
 const router = express.Router();
 
@@ -64,6 +66,48 @@ router.post('/register', async (req, res) => {
     });
 
     await user.save();
+
+    // Create a recent activity entry for admin
+    try {
+      await RecentActivity.create({
+        type: 'user',
+        message: `New user registered: ${user.firstName} ${user.lastName} (${user.email})`,
+        user: user._id,
+        data: { email: user.email }
+      });
+    } catch (actErr) {
+      console.error('Failed to create recent activity:', actErr);
+    }
+
+    // Send notification email to admin (if configured)
+    try {
+      if (process.env.EMAIL_HOST && process.env.ADMIN_EMAIL) {
+        const transporter = nodemailer.createTransport({
+          host: process.env.EMAIL_HOST,
+          port: parseInt(process.env.EMAIL_PORT || '587', 10),
+          secure: false,
+          auth: process.env.EMAIL_USER ? {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS
+          } : undefined
+        });
+
+        const mailOptions = {
+          from: process.env.EMAIL_USER || `no-reply@${req.hostname}`,
+          to: process.env.ADMIN_EMAIL,
+          subject: 'New user registration',
+          text: `A new user has registered.\n\nName: ${user.firstName} ${user.lastName}\nEmail: ${user.email}\nPhone: ${user.phone || 'N/A'}\nRegistered At: ${user.createdAt}`
+        };
+
+        transporter.sendMail(mailOptions).catch(err => {
+          console.error('Failed to send admin notification email:', err);
+        });
+      } else {
+        console.log('EMAIL_HOST or ADMIN_EMAIL not configured; skipping admin email');
+      }
+    } catch (emailErr) {
+      console.error('Error while attempting to send admin email:', emailErr);
+    }
 
     // Generate JWT token
     const token = jwt.sign(
