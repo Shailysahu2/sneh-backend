@@ -15,6 +15,7 @@ const taskRoutes = require('./routes/task');
 const chatbotRoutes = require('./routes/chatbot');
 const activityRoutes = require('./routes/activity');
 const debugSmtpRoutes = require('./routes/debugSmtp');
+const debugSmtpPortsRoutes = require('./routes/debugSmtpPorts');
 const path = require('path');
 
 // Connect to MongoDB
@@ -70,6 +71,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/debug-smtp', debugSmtpRoutes);
+app.use('/api/debug-smtp-ports', debugSmtpPortsRoutes);
 
 // Start server
 app.listen(PORT, () => {
