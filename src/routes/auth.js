@@ -79,41 +79,39 @@ router.post('/register', async (req, res) => {
       console.error('Failed to create recent activity:', actErr);
     }
 
-    // Send notification email to admin (if configured)
+    // Send notification email to admin (SMTP-only). Fire-and-forget so registration stays fast.
     try {
       if (process.env.EMAIL_HOST && process.env.ADMIN_EMAIL) {
         const port = parseInt(process.env.EMAIL_PORT || '587', 10);
         const isSecure = port === 465;
-        const transporterOptions = {
+
+        const transporter = nodemailer.createTransport({
           host: process.env.EMAIL_HOST,
           port,
           secure: isSecure,
           auth: process.env.EMAIL_USER ? {
             user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS
+            pass: process.env.EMAIL_PASSWORD || process.env.EMAIL_PASS
           } : undefined,
           tls: { rejectUnauthorized: false },
-          // timeouts to avoid long hangs
           connectionTimeout: 10000,
           greetingTimeout: 10000,
           socketTimeout: 20000
-        };
+        });
 
-        // create transporter and send email asynchronously (do not await)
-        const transporter = nodemailer.createTransport(transporterOptions);
+        const masked = { host: process.env.EMAIL_HOST, port, secure: isSecure, auth: transporter.options.auth ? { user: transporter.options.auth.user, pass: '***' } : undefined };
+        console.log('Creating SMTP transporter with options (masked):', masked);
 
-        const logTransportOptions = {
-          host: transporterOptions.host,
-          port: transporterOptions.port,
-          secure: transporterOptions.secure,
-          auth: transporterOptions.auth ? { user: transporterOptions.auth.user, pass: '***' } : undefined
-        };
-        console.log('Creating SMTP transporter with options:', logTransportOptions);
+        // helper to avoid verify hanging forever
+        const verifyWithTimeout = (trans, ms) => Promise.race([
+          trans.verify(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('verify timeout')), ms))
+        ]);
 
-        // verify SMTP connection quickly to catch config errors
-        transporter.verify()
+        // non-blocking verify and send
+        verifyWithTimeout(transporter, 8000)
           .then(() => console.log('SMTP transporter verified and ready'))
-          .catch(err => console.error('SMTP transporter verification failed:', err));
+          .catch(err => console.error('SMTP transporter verification failed:', err && err.message ? err.message : err));
 
         const mailOptions = {
           from: process.env.EMAIL_USER || `no-reply@${req.hostname}`,
@@ -122,15 +120,14 @@ router.post('/register', async (req, res) => {
           text: `A new user has registered.\n\nName: ${user.firstName} ${user.lastName}\nEmail: ${user.email}\nPhone: ${user.phone || 'N/A'}\nRegistered At: ${user.createdAt}`
         };
 
-        console.log('Queueing admin notification email to', process.env.ADMIN_EMAIL);
         transporter.sendMail(mailOptions)
           .then(info => console.log('Admin notification email sent:', info && info.messageId))
-          .catch(err => console.error('Failed to send admin notification email:', err));
+          .catch(err => console.error('Failed to send admin notification email:', err && err.message ? err.message : err));
       } else {
         console.log('EMAIL_HOST or ADMIN_EMAIL not configured; skipping admin email');
       }
     } catch (emailErr) {
-      console.error('Error while attempting to send admin email:', emailErr);
+      console.error('Error while attempting to send admin email:', emailErr && emailErr.message ? emailErr.message : emailErr);
     }
 
     // Generate JWT token
